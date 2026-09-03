@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Quejas: cualquiera puede crear una (el formulario público no requiere
+    // login), pero solo el personal autenticado (admin) puede leerlas,
+    // editarlas o borrarlas. Así ningún cliente puede ver los reclamos de otros.
+    match /quejas/{docId} {
+      allow create: if isQuejaValida();
+      allow read, update, delete: if request.auth != null;
+    }
+
+    // Valoraciones: mismo criterio. El público solo puede crear.
+    match /valoraciones/{docId} {
+      allow create: if isValoracionValida();
+      allow read, update, delete: if request.auth != null;
+    }
+
+    function isQuejaValida() {
+      let d = request.resource.data;
+      return d.mensaje is string && d.mensaje.size() > 0 && d.mensaje.size() < 3000
+        && d.estado == 'nueva';
+    }
+
+    function isValoracionValida() {
+      let d = request.resource.data;
+      return d.puntuacion is int && d.puntuacion >= 1 && d.puntuacion <= 5;
+    }
+  }
+}
