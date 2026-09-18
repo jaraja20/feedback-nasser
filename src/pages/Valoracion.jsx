@@ -1,19 +1,23 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams, Navigate } from 'react-router-dom'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
 import { db } from '../lib/firebase'
-import { AREAS } from '../lib/constants'
+import { AREAS, SUCURSALES, sucursalLabel } from '../lib/constants'
 import StarRating from '../components/StarRating'
 import { IconStar } from '../components/Icons'
 
 export default function Valoracion() {
   const navigate = useNavigate()
+  const { sucursal } = useParams()
   const [puntuacion, setPuntuacion] = useState(0)
   const [area, setArea] = useState(AREAS[0].value)
   const [comentario, setComentario] = useState('')
   const [nombre, setNombre] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [error, setError] = useState('')
+
+  const sucursalValida = SUCURSALES.some((s) => s.value === sucursal)
+  if (!sucursalValida) return <Navigate to="/" replace />
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -25,6 +29,7 @@ export default function Valoracion() {
     setEnviando(true)
     try {
       await addDoc(collection(db, 'valoraciones'), {
+        sucursal,
         puntuacion,
         area,
         comentario: comentario.trim(),
@@ -55,7 +60,7 @@ export default function Valoracion() {
                 </div>
                 <div>
                   <h1>¿Cómo fue tu experiencia?</h1>
-                  <p>Tu valoración nos ayuda a mejorar</p>
+                  <p>{sucursalLabel(sucursal)} · Tu valoración nos ayuda a mejorar</p>
                 </div>
               </div>
 

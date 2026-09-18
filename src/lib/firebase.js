@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, getApp, getApps } from 'firebase/app'
 import { getFirestore } from 'firebase/firestore'
 import { getAuth } from 'firebase/auth'
 
@@ -17,3 +17,15 @@ const firebaseConfig = {
 export const app = initializeApp(firebaseConfig)
 export const db = getFirestore(app)
 export const auth = getAuth(app)
+
+// App secundaria de Firebase, usada únicamente para crear usuarios nuevos
+// desde el panel sin cerrar la sesión del administrador que los está creando
+// (Firebase Auth, al crear un usuario, inicia sesión automáticamente con esa
+// cuenta nueva en la instancia que se use — por eso usamos una instancia aparte).
+export function getSecondaryAuth() {
+  const name = 'secondary'
+  const secondaryApp = getApps().some((a) => a.name === name)
+    ? getApp(name)
+    : initializeApp(firebaseConfig, name)
+  return getAuth(secondaryApp)
+}

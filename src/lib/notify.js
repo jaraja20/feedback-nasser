@@ -1,4 +1,5 @@
 import emailjs from '@emailjs/browser'
+import { sucursalLabel } from './constants'
 
 // Notificación por correo cuando llega una queja nueva.
 // Usa EmailJS (https://www.emailjs.com) porque permite enviar un correo
@@ -15,7 +16,7 @@ const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
 const PUBLIC_KEY = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
 const NOTIFY_EMAIL = import.meta.env.VITE_NOTIFY_EMAIL // a quién avisar (RRHH)
 
-export async function notifyNuevaQueja({ nombre, telefono, email, area, mensaje }) {
+export async function notifyNuevaQueja({ nombre, telefono, email, area, mensaje, sucursal, enSitio }) {
   if (!SERVICE_ID || !TEMPLATE_ID || !PUBLIC_KEY) {
     console.warn('[notify] EmailJS no está configurado, se omite el envío de correo.')
     return
@@ -26,6 +27,8 @@ export async function notifyNuevaQueja({ nombre, telefono, email, area, mensaje 
       TEMPLATE_ID,
       {
         to_email: NOTIFY_EMAIL || '',
+        sucursal: sucursalLabel(sucursal),
+        prioridad: enSitio ? 'URGENTE: el cliente está en el local ahora mismo' : 'Normal',
         cliente_nombre: nombre || 'Anónimo',
         cliente_telefono: telefono || '-',
         cliente_email: email || '-',

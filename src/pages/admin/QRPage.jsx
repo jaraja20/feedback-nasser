@@ -1,6 +1,7 @@
-import { useRef } from 'react'
-import { Link } from 'react-router-dom'
 import { QRCodeCanvas } from 'qrcode.react'
+import { useRole } from '../../lib/useRole.jsx'
+import AdminLayout from '../../components/AdminLayout'
+import { SUCURSALES } from '../../lib/constants'
 import { IconAlert, IconStar } from '../../components/Icons'
 
 const BASE_URL = window.location.origin
@@ -16,46 +17,64 @@ function downloadCanvas(id, filename) {
 }
 
 export default function QRPage() {
+  const { role, sucursal: miSucursal } = useRole()
+  const sucursales = role === 'administrador' ? SUCURSALES : SUCURSALES.filter((s) => s.value === miSucursal)
+
   return (
-    <div className="admin-shell">
-      <div className="admin-topbar">
-        <div className="admin-topbar-left">
-          <img src="/logo-nasser.png" alt="Nasser Cubiertas" />
-          <div className="admin-topbar-title">Códigos QR</div>
+    <AdminLayout>
+      <div className="admin-main-inner">
+        <div className="admin-page-header">
+          <h1>Códigos QR</h1>
+          <p>Descargá cada código e imprimilo donde están los clientes de esa sucursal</p>
         </div>
-        <Link to="/admin" className="btn btn-secondary btn-sm">
-          Volver al panel
-        </Link>
-      </div>
 
-      <div className="admin-content">
-        <p className="muted" style={{ marginBottom: '1.5rem' }}>
-          Descargá cada código e imprimilo para colocarlo donde están los clientes (mostrador, sala de
-          espera, autocentro). Cada uno lleva directo al formulario correspondiente.
-        </p>
+        {sucursales.map((s) => (
+          <div key={s.value} style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>{s.label}</h2>
+            <div className="qr-grid">
+              <div className="qr-card">
+                <IconAlert width={28} height={28} style={{ color: 'var(--color-primary)' }} />
+                <h3>Quejas / Reclamos</h3>
+                <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/queja/{s.value}</p>
+                <QRCodeCanvas
+                  id={`qr-queja-${s.value}`}
+                  value={`${BASE_URL}/queja/${s.value}`}
+                  size={200}
+                  fgColor="#171717"
+                  level="M"
+                  includeMargin
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => downloadCanvas(`qr-queja-${s.value}`, `qr-quejas-${s.value}.png`)}
+                >
+                  Descargar PNG
+                </button>
+              </div>
 
-        <div className="qr-grid">
-          <div className="qr-card">
-            <IconAlert width={28} height={28} style={{ color: 'var(--color-primary)' }} />
-            <h3>Quejas / Reclamos</h3>
-            <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/queja</p>
-            <QRCodeCanvas id="qr-queja" value={`${BASE_URL}/queja`} size={220} fgColor="#171717" level="M" includeMargin />
-            <button className="btn btn-primary btn-sm" onClick={() => downloadCanvas('qr-queja', 'qr-quejas-nasser.png')}>
-              Descargar PNG
-            </button>
+              <div className="qr-card">
+                <IconStar width={28} height={28} style={{ color: 'var(--color-primary)' }} />
+                <h3>Valoración</h3>
+                <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/valoracion/{s.value}</p>
+                <QRCodeCanvas
+                  id={`qr-valoracion-${s.value}`}
+                  value={`${BASE_URL}/valoracion/${s.value}`}
+                  size={200}
+                  fgColor="#171717"
+                  level="M"
+                  includeMargin
+                />
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => downloadCanvas(`qr-valoracion-${s.value}`, `qr-valoracion-${s.value}.png`)}
+                >
+                  Descargar PNG
+                </button>
+              </div>
+            </div>
           </div>
-
-          <div className="qr-card">
-            <IconStar width={28} height={28} style={{ color: 'var(--color-primary)' }} />
-            <h3>Valoración</h3>
-            <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/valoracion</p>
-            <QRCodeCanvas id="qr-valoracion" value={`${BASE_URL}/valoracion`} size={220} fgColor="#171717" level="M" includeMargin />
-            <button className="btn btn-primary btn-sm" onClick={() => downloadCanvas('qr-valoracion', 'qr-valoracion-nasser.png')}>
-              Descargar PNG
-            </button>
-          </div>
-        </div>
+        ))}
       </div>
-    </div>
+    </AdminLayout>
   )
 }

@@ -3,29 +3,81 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Quejas: cualquiera puede crear una (el formulario público no requiere
-    // login), pero solo el personal autenticado (admin) puede leerlas,
-    // editarlas o borrarlas. Así ningún cliente puede ver los reclamos de otros.
+    // ---------- Quejas ----------
+    // Cualquiera puede crear una (el formulario público no requiere login).
+    // Lectura: roles globales (administrador/admin/visor) ven todas las
+    // sucursales; un "jefe" solo ve las de su propia sucursal (el cliente
+    // que arma la consulta TIENE que filtrar por su sucursal, si no la
+    // consulta entera es rechazada).
+    // Escritura (tomar caso / resolver): administrador o el jefe dueño de
+    // esa sucursal. Borrado: solo administrador.
     match /quejas/{docId} {
       allow create: if isQuejaValida();
-      allow read, update, delete: if request.auth != null;
+      allow read: if request.auth != null && (esGlobal() || esJefeDe(resource.data.sucursal));
+      allow update: if request.auth != null && (esAdministrador() || esJefeDe(resource.data.sucursal));
+      allow delete: if request.auth != null && esAdministrador();
     }
 
-    // Valoraciones: mismo criterio. El público solo puede crear.
+    // ---------- Valoraciones ----------
+    // Mismo criterio de lectura por sucursal/rol. El público solo puede
+    // crear; nadie necesita editarlas, solo el administrador puede borrarlas.
     match /valoraciones/{docId} {
       allow create: if isValoracionValida();
-      allow read, update, delete: if request.auth != null;
+      allow read: if request.auth != null && (esGlobal() || esJefeDe(resource.data.sucursal));
+      allow delete: if request.auth != null && esAdministrador();
+    }
+
+    // ---------- Roles de administración ----------
+    // Colección "admins", un doc por usuario (id = uid) con { email, rol,
+    // sucursal, creadoPor, creadoEn }. Cualquier usuario logueado puede leer
+    // (para saber su propio rol). Para crear o modificar un documento hace
+    // falta ya ser administrador, con una única excepción: un usuario puede
+    // crear su propio primer documento si todavía no tiene ninguno (arranque
+    // inicial del sistema, para poder dar de alta al primer administrador).
+    match /admins/{uid} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (
+        (request.auth.uid == uid && !exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
+        || esAdministrador()
+      );
+      allow update, delete: if request.auth != null && esAdministrador();
+    }
+
+    // ---------- Funciones auxiliares ----------
+
+    function misDatos() {
+      return get(/databases/$(database)/documents/admins/$(request.auth.uid)).data;
+    }
+
+    function tengoRol() {
+      return exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    function esAdministrador() {
+      return tengoRol() && misDatos().rol == 'administrador';
+    }
+
+    // administrador, admin y visor ven todas las sucursales.
+    function esGlobal() {
+      return tengoRol() && misDatos().rol in ['administrador', 'admin', 'visor'];
+    }
+
+    // Un "jefe" solo puede leer/operar documentos de su propia sucursal.
+    function esJefeDe(sucursal) {
+      return tengoRol() && misDatos().rol == 'jefe' && misDatos().sucursal == sucursal;
     }
 
     function isQuejaValida() {
       let d = request.resource.data;
       return d.mensaje is string && d.mensaje.size() > 0 && d.mensaje.size() < 3000
-        && d.estado == 'nueva';
+        && d.estado == 'nueva'
+        && d.sucursal is string;
     }
 
     function isValoracionValida() {
       let d = request.resource.data;
-      return d.puntuacion is int && d.puntuacion >= 1 && d.puntuacion <= 5;
+      return d.puntuacion is int && d.puntuacion >= 1 && d.puntuacion <= 5
+        && d.sucursal is string;
     }
   }
 }
