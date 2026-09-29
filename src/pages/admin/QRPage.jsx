@@ -1,10 +1,15 @@
+import { useState } from 'react'
 import { QRCodeCanvas } from 'qrcode.react'
 import { useRole } from '../../lib/useRole.jsx'
 import AdminLayout from '../../components/AdminLayout'
 import { SUCURSALES } from '../../lib/constants'
 import { IconAlert, IconStar } from '../../components/Icons'
+import { generarFlyerQR } from '../../lib/flyer'
 
 const BASE_URL = window.location.origin
+// El QR base se renderiza grande (nivel de error alto) para que se vea nítido
+// incluso ampliado dentro del flyer de 20x15cm a 300dpi.
+const QR_BASE_SIZE = 600
 
 function downloadCanvas(id, filename) {
   const canvas = document.getElementById(id)
@@ -19,6 +24,22 @@ function downloadCanvas(id, filename) {
 export default function QRPage() {
   const { role, sucursal: miSucursal } = useRole()
   const sucursales = role === 'administrador' ? SUCURSALES : SUCURSALES.filter((s) => s.value === miSucursal)
+  const [generando, setGenerando] = useState(null)
+
+  async function descargarFlyer(tipo, sucursal) {
+    const key = `${tipo}-${sucursal.value}`
+    setGenerando(key)
+    try {
+      await generarFlyerQR({
+        tipo,
+        sucursalLabel: sucursal.label,
+        qrCanvasId: `qr-${tipo}-${sucursal.value}`,
+        filename: `flyer-${tipo}-${sucursal.value}.png`,
+      })
+    } finally {
+      setGenerando(null)
+    }
+  }
 
   return (
     <AdminLayout>
@@ -39,16 +60,24 @@ export default function QRPage() {
                 <QRCodeCanvas
                   id={`qr-queja-${s.value}`}
                   value={`${BASE_URL}/queja/${s.value}`}
-                  size={200}
+                  size={QR_BASE_SIZE}
                   fgColor="#171717"
-                  level="M"
+                  level="H"
                   includeMargin
+                  style={{ width: 160, height: 160 }}
                 />
                 <button
                   className="btn btn-primary btn-sm"
+                  disabled={generando === `queja-${s.value}`}
+                  onClick={() => descargarFlyer('queja', s)}
+                >
+                  {generando === `queja-${s.value}` ? 'Generando…' : 'Descargar flyer para imprimir'}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
                   onClick={() => downloadCanvas(`qr-queja-${s.value}`, `qr-quejas-${s.value}.png`)}
                 >
-                  Descargar PNG
+                  Descargar solo el QR
                 </button>
               </div>
 
@@ -59,16 +88,24 @@ export default function QRPage() {
                 <QRCodeCanvas
                   id={`qr-valoracion-${s.value}`}
                   value={`${BASE_URL}/valoracion/${s.value}`}
-                  size={200}
+                  size={QR_BASE_SIZE}
                   fgColor="#171717"
-                  level="M"
+                  level="H"
                   includeMargin
+                  style={{ width: 160, height: 160 }}
                 />
                 <button
                   className="btn btn-primary btn-sm"
+                  disabled={generando === `valoracion-${s.value}`}
+                  onClick={() => descargarFlyer('valoracion', s)}
+                >
+                  {generando === `valoracion-${s.value}` ? 'Generando…' : 'Descargar flyer para imprimir'}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
                   onClick={() => downloadCanvas(`qr-valoracion-${s.value}`, `qr-valoracion-${s.value}.png`)}
                 >
-                  Descargar PNG
+                  Descargar solo el QR
                 </button>
               </div>
             </div>
