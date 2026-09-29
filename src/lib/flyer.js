@@ -18,10 +18,13 @@ const FLYER_H_CM = 20
 const W = Math.round(FLYER_W_CM * CM_TO_IN * DPI) // ancho: 2362px
 const H = Math.round(FLYER_H_CM * CM_TO_IN * DPI) // alto: 1772px
 
-// Tamaño "oficio" tal como se usa habitualmente en Paraguay/la región: 216 x
-// 330 mm (más largo que carta, más corto que legal de EE.UU.).
-const OFICIO_W_MM = 216
-const OFICIO_H_MM = 330
+// Tamaño "oficio" según el preset real que usan las impresoras/navegadores
+// ("Oficio 9"): 215 x 315 mm. Tiene que coincidir EXACTO con el tamaño de
+// papel que se elige al imprimir; si no coincide, el navegador reescala
+// toda la página para que entre en el papel físico y el flyer sale más
+// chico de lo esperado.
+const OFICIO_W_MM = 215
+const OFICIO_H_MM = 315
 
 const RED = '#DC2626'
 const DARK = '#171717'
@@ -403,10 +406,10 @@ export async function generarFlyerQR({ tipo, sucursalLabel, qrCanvasId, filename
   descargarCanvasPNG(canvas, filename)
 }
 
-// Descarga un PDF tamaño oficio (216x330mm) con el flyer ya centrado y
-// dimensionado a 20x15cm, más un recuadro negro de corte para que, al
-// imprimir en oficio y recortar por esa línea, quede exacto para el soporte
-// de acrílico.
+// Descarga un PDF tamaño oficio (215x315mm, preset "Oficio 9") con el flyer
+// ya centrado y dimensionado a 15x20cm reales, más un recuadro negro de
+// corte para que, al imprimir en oficio SIN reescalar y recortar por esa
+// línea, quede exacto para el soporte de acrílico.
 export async function generarFlyerPDF({ tipo, sucursalLabel, qrCanvasId, filename }) {
   const canvas = await construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId })
   const imgData = canvas.toDataURL('image/png')
@@ -444,7 +447,7 @@ export async function generarFlyerPDF({ tipo, sucursalLabel, qrCanvasId, filenam
   doc.setFontSize(9)
   doc.setTextColor(120, 120, 120)
   doc.text(
-    `Imprimir en tamaño oficio sin ajustar a página · Recortar por la línea marcada · Tamaño final: ${FLYER_W_CM} x ${FLYER_H_CM} cm`,
+    `Imprimir en papel Oficio (215x315mm) a escala 100% (no "ajustar a página") · Recortar por la línea marcada · Tamaño final: ${FLYER_W_CM} x ${FLYER_H_CM} cm`,
     OFICIO_W_MM / 2,
     OFICIO_H_MM - 8,
     { align: 'center' },
