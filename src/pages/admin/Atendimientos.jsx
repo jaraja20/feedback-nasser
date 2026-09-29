@@ -16,10 +16,27 @@ import { useRole } from '../../lib/useRole.jsx'
 import AdminLayout from '../../components/AdminLayout'
 import ResolverModal from '../../components/ResolverModal'
 import { AREAS, ESTADOS, SUCURSALES, sucursalLabel } from '../../lib/constants'
-import { IconInbox, IconStar, IconClock, IconCheck, IconAlert } from '../../components/Icons'
+import { IconInbox, IconStar, IconClock, IconCheck, IconAlert, IconWhatsapp } from '../../components/Icons'
 
 function areaLabel(value) {
   return AREAS.find((a) => a.value === value)?.label || value || '-'
+}
+
+// Arma el link de wa.me a partir de un teléfono cargado a mano por el
+// cliente (sin formato fijo). Asume Paraguay (código 595): si empieza con
+// 0 se lo reemplaza por el código de país, y si no tiene código de país se
+// lo agrega. El mensaje precargado ayuda a que quien tome el caso no tenga
+// que escribir desde cero.
+function linkWhatsapp(telefono, nombre) {
+  const digits = (telefono || '').replace(/\D/g, '')
+  if (!digits) return null
+  let numero = digits
+  if (numero.startsWith('0')) numero = '595' + numero.slice(1)
+  else if (!numero.startsWith('595')) numero = '595' + numero
+  const texto = encodeURIComponent(
+    `Hola${nombre ? ' ' + nombre : ''}, te escribimos de Nasser Cubiertas por tu reclamo.`,
+  )
+  return `https://wa.me/${numero}?text=${texto}`
 }
 
 function formatFecha(ts) {
@@ -274,8 +291,18 @@ export default function Atendimientos() {
                     <div className="item-message">{item.mensaje}</div>
 
                     {(item.telefono || item.email) && (
-                      <div className="item-meta">
-                        {item.telefono && <span>📞 {item.telefono} </span>}
+                      <div className="item-meta" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {item.telefono && (
+                          <a
+                            href={linkWhatsapp(item.telefono, item.nombre)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', color: '#25D366', fontWeight: 600 }}
+                          >
+                            <IconWhatsapp width={15} height={15} />
+                            {item.telefono}
+                          </a>
+                        )}
                         {item.email && <span>✉️ {item.email}</span>}
                       </div>
                     )}
