@@ -1,13 +1,14 @@
 // Genera un "mini flyer" imprimible (pensado para un soporte de acrílico de
-// 20 x 15 cm) con el logo de Nasser, un mensaje invitando al cliente y el QR
-// correspondiente (queja o valoración). El arte se dibuja en un <canvas>
-// oculto a 300 DPI y se puede descargar como PNG suelto, o como PDF tamaño
-// oficio con el arte centrado y un recuadro de corte para que quede exacto
-// a 20x15cm al imprimir y recortar.
+// 15 x 20 cm) con el logo de Nasser, un mensaje invitando al cliente y el QR
+// que lleva al formulario único de feedback de la sucursal. El arte se
+// dibuja en un <canvas> oculto a 300 DPI y se puede descargar como PNG
+// suelto, o como PDF tamaño oficio con el arte centrado y un recuadro de
+// corte para que quede exacto a 15x20cm al imprimir y recortar.
 //
-// Los dos tipos (queja / valoración) usan siempre el mismo rojo de marca,
-// pero con un DISEÑO distinto (ícono, marco, forma del botón) para que no se
-// puedan confundir de un vistazo aunque estén pegados en el mismo mostrador.
+// Ya no hay dos tipos de flyer (queja / valoración): todo está centralizado
+// en un solo QR por sucursal que lleva al formulario combinado, así que acá
+// queda un solo diseño — el estilo "marco" (marco perimetral fino + fila de
+// estrellas + QR tipo visor) que fue el que se eligió mantener.
 
 import jsPDF from 'jspdf'
 
@@ -15,8 +16,8 @@ const DPI = 300
 const CM_TO_IN = 1 / 2.54
 const FLYER_W_CM = 15
 const FLYER_H_CM = 20
-const W = Math.round(FLYER_W_CM * CM_TO_IN * DPI) // ancho: 2362px
-const H = Math.round(FLYER_H_CM * CM_TO_IN * DPI) // alto: 1772px
+const W = Math.round(FLYER_W_CM * CM_TO_IN * DPI) // ancho: 1772px
+const H = Math.round(FLYER_H_CM * CM_TO_IN * DPI) // alto: 2362px
 
 // Tamaño "oficio" según el preset real que usan las impresoras/navegadores
 // ("Oficio 9"): 215 x 315 mm. Tiene que coincidir EXACTO con el tamaño de
@@ -31,19 +32,10 @@ const DARK = '#171717'
 const GRAY = '#6B7280'
 const SIDE_PAD = W * 0.09
 
-const TEXTOS = {
-  queja: {
-    titulo: '¿Tuviste algún inconveniente?',
-    subtitulo: 'Contanos qué pasó y te ayudamos al instante',
-    cta: 'Escaneá y reportalo',
-    estilo: 'bloques', // franjas rojas sólidas arriba/abajo + ícono de alerta
-  },
-  valoracion: {
-    titulo: '¿Cómo fue tu experiencia?',
-    subtitulo: 'Tu opinión nos ayuda a mejorar cada día',
-    cta: 'Escaneá y calificanos',
-    estilo: 'marco', // marco fino perimetral + estrellas + QR tipo visor
-  },
+const TEXTO = {
+  titulo: '¿Cómo fue tu experiencia?',
+  subtitulo: 'Calificanos y contanos si tuviste algún inconveniente',
+  cta: 'Escaneá y contanos',
 }
 
 function loadImage(src) {
@@ -111,28 +103,8 @@ function starPath(ctx, cx, cy, outerR, innerR) {
   ctx.closePath()
 }
 
-// Ícono de alerta: círculo relleno con un "!" blanco — usado en el flyer de
-// quejas. Devuelve la altura total ocupada.
-function drawIconoAlerta(ctx, cx, topY) {
-  const d = H * 0.09
-  const r = d / 2
-  const cy = topY + r
-  ctx.fillStyle = RED
-  ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fill()
-
-  ctx.fillStyle = '#FFFFFF'
-  ctx.textAlign = 'center'
-  ctx.textBaseline = 'middle'
-  ctx.font = `bold ${Math.round(d * 0.62)}px Arial, sans-serif`
-  ctx.fillText('!', cx, cy + d * 0.03)
-  ctx.textBaseline = 'top'
-  return d
-}
-
-// Ícono de estrellas: fila de 5 estrellas rellenas — usado en el flyer de
-// valoración. Devuelve la altura total ocupada.
+// Ícono de estrellas: fila de 5 estrellas rellenas. Devuelve la altura total
+// ocupada.
 function drawIconoEstrellas(ctx, cx, topY) {
   const starOuter = H * 0.03
   const starInner = starOuter * 0.42
@@ -149,9 +121,7 @@ function drawIconoEstrellas(ctx, cx, topY) {
   return starOuter * 2
 }
 
-// Marco perimetral fino con pequeñas marcas en las esquinas — usado solo en
-// el diseño "marco" (valoración) para diferenciarlo de las franjas sólidas
-// del diseño "bloques" (queja).
+// Marco perimetral fino con pequeñas marcas en las esquinas.
 function drawMarcoPerimetral(ctx, inset) {
   ctx.strokeStyle = RED
   ctx.lineWidth = 5
@@ -178,19 +148,8 @@ function drawMarcoPerimetral(ctx, inset) {
   })
 }
 
-// Tarjeta del QR estilo "bloques": card blanca con borde rojo redondeado
-// continuo — look sólido, coherente con las franjas de color del diseño.
-function drawQrCardBloques(ctx, x, y, w, h, r) {
-  ctx.fillStyle = '#FFFFFF'
-  ctx.strokeStyle = RED
-  ctx.lineWidth = 6
-  roundRect(ctx, x, y, w, h, r)
-  ctx.fill()
-  ctx.stroke()
-}
-
 // Tarjeta del QR estilo "marco": sin relleno de borde continuo, con
-// esquinas tipo "visor de cámara" — look distinto, más asociado a "escanear".
+// esquinas tipo "visor de cámara".
 function drawQrCardVisor(ctx, x, y, w, h) {
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(x, y, w, h)
@@ -214,18 +173,7 @@ function drawQrCardVisor(ctx, x, y, w, h) {
   })
 }
 
-// CTA estilo "bloques": franja rellena sólida, esquinas apenas redondeadas.
-function drawCtaBloques(ctx, cx, y, w, h, text, font, lineH, padY) {
-  ctx.fillStyle = RED
-  roundRect(ctx, cx - w / 2, y, w, h, h * 0.2)
-  ctx.fill()
-  ctx.fillStyle = '#FFFFFF'
-  ctx.font = font
-  drawLines(ctx, [text], cx, y + padY, lineH)
-}
-
-// CTA estilo "marco": botón tipo píldora, contorno rojo sobre fondo blanco
-// — silueta bien distinta a la franja sólida del otro diseño.
+// CTA estilo "marco": botón tipo píldora, contorno rojo sobre fondo blanco.
 function drawCtaMarco(ctx, cx, y, w, h, text, font, lineH, padY) {
   ctx.fillStyle = '#FFFFFF'
   ctx.strokeStyle = RED
@@ -240,38 +188,33 @@ function drawCtaMarco(ctx, cx, y, w, h, text, font, lineH, padY) {
 
 // Dibuja el arte del flyer en un <canvas> oculto a 300dpi y lo devuelve (sin
 // descargar nada todavía) — lo usan tanto la descarga en PNG como en PDF.
-async function construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId }) {
+async function construirCanvasFlyer({ sucursalLabel, qrCanvasId }) {
   const canvas = document.createElement('canvas')
   canvas.width = W
   canvas.height = H
   const ctx = canvas.getContext('2d')
 
-  const t = TEXTOS[tipo] || TEXTOS.queja
-  const esBloques = t.estilo === 'bloques'
   const logo = await loadImage('/logo-nasser.png')
 
   // --- Medidas de cada bloque (sin dibujar todavía) ---
-  // Los tamaños están calibrados para que, incluso en el peor caso (título Y
-  // subtítulo partidos en 2 líneas), el contenido total no supere la altura
-  // del canvas — probado a mano contra los textos reales de TEXTOS arriba.
-  const topBarH = esBloques ? H * 0.028 : H * 0.05 // en "marco" es solo margen, sin franja sólida
-  const bottomBarH = esBloques ? H * 0.018 : H * 0.035
+  const topBarH = H * 0.05
+  const bottomBarH = H * 0.035
   const marcoInset = H * 0.018
 
   const logoW = W * 0.19
   const logoH = logoW * (logo.height / logo.width)
 
-  const iconoH = esBloques ? H * 0.085 : H * 0.06
+  const iconoH = H * 0.06
 
   const tituloFont = `bold ${Math.round(H * 0.05)}px Arial, sans-serif`
   const tituloLineH = H * 0.062
   ctx.font = tituloFont
-  const tituloLines = wrapLines(ctx, t.titulo, W - SIDE_PAD * 2)
+  const tituloLines = wrapLines(ctx, TEXTO.titulo, W - SIDE_PAD * 2)
 
   const subFont = `${Math.round(H * 0.027)}px Arial, sans-serif`
   const subLineH = H * 0.036
   ctx.font = subFont
-  const subLines = wrapLines(ctx, t.subtitulo, W - SIDE_PAD * 2.3)
+  const subLines = wrapLines(ctx, TEXTO.subtitulo, W - SIDE_PAD * 2.3)
 
   const qrSize = H * 0.3
   const cardPad = qrSize * 0.08
@@ -320,19 +263,7 @@ async function construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId }) {
   // --- Fondo ---
   ctx.fillStyle = '#FFFFFF'
   ctx.fillRect(0, 0, W, H)
-
-  if (esBloques) {
-    // Diseño "bloques": franjas rojas sólidas arriba/abajo.
-    ctx.strokeStyle = '#E5E7EB'
-    ctx.lineWidth = 4
-    ctx.strokeRect(2, 2, W - 4, H - 4)
-    ctx.fillStyle = RED
-    ctx.fillRect(0, 0, W, topBarH)
-    ctx.fillRect(0, H - bottomBarH, W, bottomBarH)
-  } else {
-    // Diseño "marco": borde perimetral fino con marcas de esquina.
-    drawMarcoPerimetral(ctx, marcoInset)
-  }
+  drawMarcoPerimetral(ctx, marcoInset)
 
   y += gapTopLogo
 
@@ -340,12 +271,8 @@ async function construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId }) {
   ctx.drawImage(logo, cx - logoW / 2, y, logoW, logoH)
   y += logoH + gapLogoIcono
 
-  // --- Ícono distintivo (alerta o estrellas) ---
-  if (esBloques) {
-    y += drawIconoAlerta(ctx, cx, y)
-  } else {
-    y += drawIconoEstrellas(ctx, cx, y)
-  }
+  // --- Ícono de estrellas ---
+  y += drawIconoEstrellas(ctx, cx, y)
   y += gapIconoTitulo
 
   // --- Título ---
@@ -360,14 +287,10 @@ async function construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId }) {
   y += drawLines(ctx, subLines, cx, y, subLineH)
   y += gapSubQr
 
-  // --- QR: card sólida (bloques) o estilo visor (marco) ---
+  // --- QR estilo visor ---
   const qrX = cx - qrSize / 2
   const qrY = y + cardPad
-  if (esBloques) {
-    drawQrCardBloques(ctx, qrX - cardPad, y, qrSize + cardPad * 2, qrCardH, 24)
-  } else {
-    drawQrCardVisor(ctx, qrX - cardPad, y, qrSize + cardPad * 2, qrCardH)
-  }
+  drawQrCardVisor(ctx, qrX - cardPad, y, qrSize + cardPad * 2, qrCardH)
 
   const qrSourceCanvas = document.getElementById(qrCanvasId)
   if (qrSourceCanvas) {
@@ -375,13 +298,9 @@ async function construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId }) {
   }
   y += qrCardH + gapQrCta
 
-  // --- CTA: franja sólida (bloques) o píldora con contorno (marco) ---
+  // --- CTA tipo píldora ---
   const ctaBannerW = W - SIDE_PAD * 1.3
-  if (esBloques) {
-    drawCtaBloques(ctx, cx, y, ctaBannerW, ctaBannerH, t.cta.toUpperCase(), ctaFont, ctaLineH, ctaPadY)
-  } else {
-    drawCtaMarco(ctx, cx, y, ctaBannerW, ctaBannerH, t.cta.toUpperCase(), ctaFont, ctaLineH, ctaPadY)
-  }
+  drawCtaMarco(ctx, cx, y, ctaBannerW, ctaBannerH, TEXTO.cta.toUpperCase(), ctaFont, ctaLineH, ctaPadY)
   y += ctaBannerH + gapCtaFooter
 
   // --- Sucursal (pie) ---
@@ -400,9 +319,9 @@ function descargarCanvasPNG(canvas, filename) {
   a.click()
 }
 
-// Descarga solo el arte del flyer como PNG suelto (20x15cm a 300dpi).
-export async function generarFlyerQR({ tipo, sucursalLabel, qrCanvasId, filename }) {
-  const canvas = await construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId })
+// Descarga solo el arte del flyer como PNG suelto (15x20cm a 300dpi).
+export async function generarFlyerQR({ sucursalLabel, qrCanvasId, filename }) {
+  const canvas = await construirCanvasFlyer({ sucursalLabel, qrCanvasId })
   descargarCanvasPNG(canvas, filename)
 }
 
@@ -410,8 +329,8 @@ export async function generarFlyerQR({ tipo, sucursalLabel, qrCanvasId, filename
 // ya centrado y dimensionado a 15x20cm reales, más un recuadro negro de
 // corte para que, al imprimir en oficio SIN reescalar y recortar por esa
 // línea, quede exacto para el soporte de acrílico.
-export async function generarFlyerPDF({ tipo, sucursalLabel, qrCanvasId, filename }) {
-  const canvas = await construirCanvasFlyer({ tipo, sucursalLabel, qrCanvasId })
+export async function generarFlyerPDF({ sucursalLabel, qrCanvasId, filename }) {
+  const canvas = await construirCanvasFlyer({ sucursalLabel, qrCanvasId })
   const imgData = canvas.toDataURL('image/png')
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [OFICIO_W_MM, OFICIO_H_MM] })

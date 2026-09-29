@@ -3,12 +3,12 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { useRole } from '../../lib/useRole.jsx'
 import AdminLayout from '../../components/AdminLayout'
 import { SUCURSALES } from '../../lib/constants'
-import { IconAlert, IconStar } from '../../components/Icons'
+import { IconStar } from '../../components/Icons'
 import { generarFlyerQR, generarFlyerPDF } from '../../lib/flyer'
 
 const BASE_URL = window.location.origin
 // El QR base se renderiza grande (nivel de error alto) para que se vea nítido
-// incluso ampliado dentro del flyer de 20x15cm a 300dpi.
+// incluso ampliado dentro del flyer de 15x20cm a 300dpi.
 const QR_BASE_SIZE = 600
 
 function downloadCanvas(id, filename) {
@@ -26,23 +26,21 @@ export default function QRPage() {
   const sucursales = role === 'administrador' ? SUCURSALES : SUCURSALES.filter((s) => s.value === miSucursal)
   const [generando, setGenerando] = useState(null)
 
-  async function descargarFlyer(formato, tipo, sucursal) {
-    const key = `${formato}-${tipo}-${sucursal.value}`
+  async function descargarFlyer(formato, sucursal) {
+    const key = `${formato}-${sucursal.value}`
     setGenerando(key)
     try {
       if (formato === 'pdf') {
         await generarFlyerPDF({
-          tipo,
           sucursalLabel: sucursal.label,
-          qrCanvasId: `qr-${tipo}-${sucursal.value}`,
-          filename: `flyer-${tipo}-${sucursal.value}-oficio.pdf`,
+          qrCanvasId: `qr-${sucursal.value}`,
+          filename: `flyer-${sucursal.value}-oficio.pdf`,
         })
       } else {
         await generarFlyerQR({
-          tipo,
           sucursalLabel: sucursal.label,
-          qrCanvasId: `qr-${tipo}-${sucursal.value}`,
-          filename: `flyer-${tipo}-${sucursal.value}.png`,
+          qrCanvasId: `qr-${sucursal.value}`,
+          filename: `flyer-${sucursal.value}.png`,
         })
       }
     } finally {
@@ -55,85 +53,47 @@ export default function QRPage() {
       <div className="admin-main-inner">
         <div className="admin-page-header">
           <h1>Códigos QR</h1>
-          <p>Descargá cada código e imprimilo donde están los clientes de esa sucursal</p>
+          <p>Un QR único por sucursal: lleva al formulario de valoración y reclamos de esa sucursal</p>
         </div>
 
-        {sucursales.map((s) => (
-          <div key={s.value} style={{ marginBottom: '2rem' }}>
-            <h2 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: '0.75rem' }}>{s.label}</h2>
-            <div className="qr-grid">
-              <div className="qr-card">
-                <IconAlert width={28} height={28} style={{ color: 'var(--color-primary)' }} />
-                <h3>Quejas / Reclamos</h3>
-                <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/queja/{s.value}</p>
-                <QRCodeCanvas
-                  id={`qr-queja-${s.value}`}
-                  value={`${BASE_URL}/queja/${s.value}`}
-                  size={QR_BASE_SIZE}
-                  fgColor="#171717"
-                  level="H"
-                  includeMargin
-                  style={{ width: 160, height: 160 }}
-                />
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={generando === `pdf-queja-${s.value}`}
-                  onClick={() => descargarFlyer('pdf', 'queja', s)}
-                >
-                  {generando === `pdf-queja-${s.value}` ? 'Generando…' : 'Descargar PDF (listo para imprimir)'}
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  disabled={generando === `png-queja-${s.value}`}
-                  onClick={() => descargarFlyer('png', 'queja', s)}
-                >
-                  {generando === `png-queja-${s.value}` ? 'Generando…' : 'Descargar flyer en PNG'}
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => downloadCanvas(`qr-queja-${s.value}`, `qr-quejas-${s.value}.png`)}
-                >
-                  Descargar solo el QR
-                </button>
-              </div>
-
-              <div className="qr-card">
-                <IconStar width={28} height={28} style={{ color: 'var(--color-primary)' }} />
-                <h3>Valoración</h3>
-                <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/valoracion/{s.value}</p>
-                <QRCodeCanvas
-                  id={`qr-valoracion-${s.value}`}
-                  value={`${BASE_URL}/valoracion/${s.value}`}
-                  size={QR_BASE_SIZE}
-                  fgColor="#171717"
-                  level="H"
-                  includeMargin
-                  style={{ width: 160, height: 160 }}
-                />
-                <button
-                  className="btn btn-primary btn-sm"
-                  disabled={generando === `pdf-valoracion-${s.value}`}
-                  onClick={() => descargarFlyer('pdf', 'valoracion', s)}
-                >
-                  {generando === `pdf-valoracion-${s.value}` ? 'Generando…' : 'Descargar PDF (listo para imprimir)'}
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  disabled={generando === `png-valoracion-${s.value}`}
-                  onClick={() => descargarFlyer('png', 'valoracion', s)}
-                >
-                  {generando === `png-valoracion-${s.value}` ? 'Generando…' : 'Descargar flyer en PNG'}
-                </button>
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => downloadCanvas(`qr-valoracion-${s.value}`, `qr-valoracion-${s.value}.png`)}
-                >
-                  Descargar solo el QR
-                </button>
-              </div>
+        <div className="qr-grid">
+          {sucursales.map((s) => (
+            <div key={s.value} className="qr-card">
+              <IconStar width={28} height={28} style={{ color: 'var(--color-primary)' }} />
+              <h3>{s.label}</h3>
+              <p className="muted" style={{ fontSize: '0.85rem' }}>{BASE_URL}/feedback/{s.value}</p>
+              <QRCodeCanvas
+                id={`qr-${s.value}`}
+                value={`${BASE_URL}/feedback/${s.value}`}
+                size={QR_BASE_SIZE}
+                fgColor="#171717"
+                level="H"
+                includeMargin
+                style={{ width: 160, height: 160 }}
+              />
+              <button
+                className="btn btn-primary btn-sm"
+                disabled={generando === `pdf-${s.value}`}
+                onClick={() => descargarFlyer('pdf', s)}
+              >
+                {generando === `pdf-${s.value}` ? 'Generando…' : 'Descargar PDF (listo para imprimir)'}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                disabled={generando === `png-${s.value}`}
+                onClick={() => descargarFlyer('png', s)}
+              >
+                {generando === `png-${s.value}` ? 'Generando…' : 'Descargar flyer en PNG'}
+              </button>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => downloadCanvas(`qr-${s.value}`, `qr-${s.value}.png`)}
+              >
+                Descargar solo el QR
+              </button>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </AdminLayout>
   )
