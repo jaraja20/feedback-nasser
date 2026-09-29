@@ -4,7 +4,7 @@ import { useRole } from '../../lib/useRole.jsx'
 import AdminLayout from '../../components/AdminLayout'
 import { SUCURSALES } from '../../lib/constants'
 import { IconAlert, IconStar } from '../../components/Icons'
-import { generarFlyerQR } from '../../lib/flyer'
+import { generarFlyerQR, generarFlyerPDF } from '../../lib/flyer'
 
 const BASE_URL = window.location.origin
 // El QR base se renderiza grande (nivel de error alto) para que se vea nítido
@@ -26,16 +26,25 @@ export default function QRPage() {
   const sucursales = role === 'administrador' ? SUCURSALES : SUCURSALES.filter((s) => s.value === miSucursal)
   const [generando, setGenerando] = useState(null)
 
-  async function descargarFlyer(tipo, sucursal) {
-    const key = `${tipo}-${sucursal.value}`
+  async function descargarFlyer(formato, tipo, sucursal) {
+    const key = `${formato}-${tipo}-${sucursal.value}`
     setGenerando(key)
     try {
-      await generarFlyerQR({
-        tipo,
-        sucursalLabel: sucursal.label,
-        qrCanvasId: `qr-${tipo}-${sucursal.value}`,
-        filename: `flyer-${tipo}-${sucursal.value}.png`,
-      })
+      if (formato === 'pdf') {
+        await generarFlyerPDF({
+          tipo,
+          sucursalLabel: sucursal.label,
+          qrCanvasId: `qr-${tipo}-${sucursal.value}`,
+          filename: `flyer-${tipo}-${sucursal.value}-oficio.pdf`,
+        })
+      } else {
+        await generarFlyerQR({
+          tipo,
+          sucursalLabel: sucursal.label,
+          qrCanvasId: `qr-${tipo}-${sucursal.value}`,
+          filename: `flyer-${tipo}-${sucursal.value}.png`,
+        })
+      }
     } finally {
       setGenerando(null)
     }
@@ -68,10 +77,17 @@ export default function QRPage() {
                 />
                 <button
                   className="btn btn-primary btn-sm"
-                  disabled={generando === `queja-${s.value}`}
-                  onClick={() => descargarFlyer('queja', s)}
+                  disabled={generando === `pdf-queja-${s.value}`}
+                  onClick={() => descargarFlyer('pdf', 'queja', s)}
                 >
-                  {generando === `queja-${s.value}` ? 'Generando…' : 'Descargar flyer para imprimir'}
+                  {generando === `pdf-queja-${s.value}` ? 'Generando…' : 'Descargar PDF (listo para imprimir)'}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={generando === `png-queja-${s.value}`}
+                  onClick={() => descargarFlyer('png', 'queja', s)}
+                >
+                  {generando === `png-queja-${s.value}` ? 'Generando…' : 'Descargar flyer en PNG'}
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
@@ -96,10 +112,17 @@ export default function QRPage() {
                 />
                 <button
                   className="btn btn-primary btn-sm"
-                  disabled={generando === `valoracion-${s.value}`}
-                  onClick={() => descargarFlyer('valoracion', s)}
+                  disabled={generando === `pdf-valoracion-${s.value}`}
+                  onClick={() => descargarFlyer('pdf', 'valoracion', s)}
                 >
-                  {generando === `valoracion-${s.value}` ? 'Generando…' : 'Descargar flyer para imprimir'}
+                  {generando === `pdf-valoracion-${s.value}` ? 'Generando…' : 'Descargar PDF (listo para imprimir)'}
+                </button>
+                <button
+                  className="btn btn-secondary btn-sm"
+                  disabled={generando === `png-valoracion-${s.value}`}
+                  onClick={() => descargarFlyer('png', 'valoracion', s)}
+                >
+                  {generando === `png-valoracion-${s.value}` ? 'Generando…' : 'Descargar flyer en PNG'}
                 </button>
                 <button
                   className="btn btn-secondary btn-sm"
