@@ -30,17 +30,14 @@ service cloud.firestore {
     // ---------- Roles de administración ----------
     // Colección "admins", un doc por usuario (id = uid) con { email, rol,
     // sucursal, creadoPor, creadoEn }. Cualquier usuario logueado puede leer
-    // (para saber su propio rol). Para crear o modificar un documento hace
-    // falta ya ser administrador, con una única excepción: un usuario puede
-    // crear su propio primer documento si todavía no tiene ninguno (arranque
-    // inicial del sistema, para poder dar de alta al primer administrador).
+    // (para saber su propio rol). Crear, modificar o borrar un documento exige
+    // ya ser administrador. (Antes un usuario sin rol podía crearse el suyo
+    // para dar de alta al primer administrador; se quitó porque permitía que
+    // cualquier cuenta, incluso una eliminada, se diera rol de administrador.
+    // Un administrador nuevo se crea desde el panel o desde la consola.)
     match /admins/{uid} {
       allow read: if request.auth != null;
-      allow create: if request.auth != null && (
-        (request.auth.uid == uid && !exists(/databases/$(database)/documents/admins/$(request.auth.uid)))
-        || esAdministrador()
-      );
-      allow update, delete: if request.auth != null && esAdministrador();
+      allow create, update, delete: if request.auth != null && esAdministrador();
     }
 
     // ---------- Funciones auxiliares ----------

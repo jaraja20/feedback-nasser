@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { collection, onSnapshot, orderBy, query } from 'firebase/firestore'
 import { db } from '../../lib/firebase'
 import { useAuth } from '../../lib/useAuth.jsx'
-import { crearUsuarioAdmin } from '../../lib/adminUsers'
+import { crearUsuarioAdmin, eliminarUsuario } from '../../lib/adminUsers'
 import AdminLayout from '../../components/AdminLayout'
+import EditarUsuarioModal from '../../components/EditarUsuarioModal'
 import { ROLES, roleLabel, SUCURSALES, sucursalLabel } from '../../lib/constants'
 import { IconLock } from '../../components/Icons'
 
@@ -17,6 +18,8 @@ export default function Usuarios() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
   const [ok, setOk] = useState('')
+  const [editando, setEditando] = useState(null)
+  const [eliminando, setEliminando] = useState(null)
 
   const necesitaSucursal = ROLES.find((r) => r.value === rol)?.necesitaSucursal
 
@@ -26,6 +29,37 @@ export default function Usuarios() {
     })
     return unsub
   }, [])
+
+  const cantAdministradores = usuarios.filter((u) => u.rol === 'administrador').length
+  const esUltimoAdministrador = (u) => u.rol === 'administrador' && cantAdministradores <= 1
+
+  function cerrarEdicion(mensaje) {
+    setEditando(null)
+    if (mensaje) {
+      setError('')
+      setOk(mensaje)
+    }
+  }
+
+  async function borrar(u) {
+    if (!window.confirm(`¿Eliminar al usuario ${u.email}? Pierde el acceso al panel de inmediato. No se puede deshacer.`)) return
+    setError('')
+    setOk('')
+    setEliminando(u.id)
+    try {
+      const { soloAcceso } = await eliminarUsuario(u.id)
+      setOk(
+        soloAcceso
+          ? `Se le quitó el acceso a ${u.email}. Su cuenta de login sigue existiendo en Firebase (falta configurar la cuenta de servicio, ver README).`
+          : `Usuario ${u.email} eliminado.`,
+      )
+    } catch (err) {
+      console.error(err)
+      setError(err.message || 'No se pudo eliminar el usuario.')
+    } finally {
+      setEliminando(null)
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -70,7 +104,7 @@ export default function Usuarios() {
       <div className="admin-main-inner">
         <div className="admin-page-header">
           <h1>Usuarios administradores</h1>
-          <p>Solo vos podés crear o gestionar cuentas del panel</p>
+          <p>Solo un administrador puede crear, editar o eliminar cuentas del panel</p>
         </div>
 
         <div className="card" style={{ maxWidth: '32rem', marginBottom: '1.5rem' }}>
@@ -152,9 +186,35 @@ export default function Usuarios() {
                   {roleLabel(u.rol)}
                 </span>
               </div>
+              <div className="item-footer">
+                <span className="item-meta">{u.id === user?.uid ? 'Tu cuenta' : ''}</span>
+                <div className="item-actions">
+                  <button className="btn btn-secondary btn-sm" onClick={() => setEditando(u)}>
+                    Editar
+                  </button>
+                  {u.id !== user?.uid && !esUltimoAdministrador(u) && (
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => borrar(u)}
+                      disabled={eliminando === u.id}
+                    >
+                      {eliminando === u.id ? 'Eliminando...' : 'Eliminar'}
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
           ))}
         </div>
+
+        {editando && (
+          <EditarUsuarioModal
+            usuario={editando}
+            esUnoMismo={editando.id === user?.uid}
+            esUltimoAdministrador={esUltimoAdministrador(editando)}
+            onCerrar={cerrarEdicion}
+          />
+        )}
       </div>
     </AdminLayout>
   )

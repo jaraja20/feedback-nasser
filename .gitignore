@@ -6,3 +6,6 @@ dist
 *.log
 
 Claude outputs/
+
+# Claves de cuenta de servicio de Firebase (nunca subir)
+*firebase-adminsdk*.json

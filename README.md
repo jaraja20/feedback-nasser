@@ -106,6 +106,21 @@ vercel --prod
 
 También agregá el dominio de Vercel (ej. `feedback-nasser.vercel.app`) en Firebase: **Authentication → Settings → Authorized domains**, para que el login funcione ahí.
 
+## 6.1 Gestión de usuarios desde el panel (cuenta de servicio)
+
+En **Usuarios** (`/admin/usuarios`) un administrador puede crear, editar (rol, sucursal, email y contraseña) y eliminar cuentas.
+
+- **Rol y sucursal** se cambian directo, sin configuración extra.
+- **Contraseña, email y borrar la cuenta de login** pasan por la función de servidor `api/usuarios.js` (Firebase no permite hacerlo desde el navegador). Necesita una cuenta de servicio:
+  1. Firebase Console → ⚙️ **Configuración del proyecto → Cuentas de servicio → Generar nueva clave privada**. Se descarga un `.json`.
+  2. Vercel → Project → Settings → **Environment Variables** → nueva variable `FIREBASE_SERVICE_ACCOUNT` con **todo el contenido** de ese `.json` (entorno Production).
+  3. Volver a desplegar.
+  4. Guardar el `.json` en un lugar seguro o borrarlo: da control total sobre el proyecto. **No subirlo a GitHub.**
+
+Sin esa variable, "Eliminar" solo le quita el rol (pierde el acceso al panel, pero la cuenta de login queda en Firebase) y cambiar email/contraseña muestra un aviso.
+
+La función solo responde a usuarios con rol `administrador`. Nadie puede eliminarse ni cambiarse el rol a sí mismo, y siempre queda al menos un administrador. Con `npm run dev` la función no corre (es de Vercel); para probarla en local usar `vercel dev`.
+
 ## 7. Generar e imprimir los QR
 
 Una vez desplegado y logueado en `/admin`, entrá a **Códigos QR** (`/admin/qr`). Ahí vas a ver los dos QR ya generados apuntando a tu dominio real de producción, listos para descargar en PNG e imprimir:
